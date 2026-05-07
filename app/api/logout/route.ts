@@ -1,13 +1,20 @@
-import { getIronSession } from "iron-session";
-import { sessionOptions } from "@/lib/session";
+import { lucia } from "@/lib/auth";
+import { cookies } from "next/headers";
+import { NextResponse } from "next/server";
 
-export async function POST(req: Request) {
-  const session = await getIronSession(req, new Response(), sessionOptions);
+export async function POST() {
+  const cookieStore = cookies();
+  const sessionId = cookieStore.get("bidbuild_session")?.value;
 
-  session.destroy();
+  if (sessionId) {
+    await lucia.invalidateSession(sessionId);
+  }
 
-  return Response.json({
-    success: true,
-    message: "Logged out successfully",
-  });
+  const blankCookie = lucia.createBlankSessionCookie();
+
+  const res = NextResponse.redirect("/login");
+  res.headers.append("Set-Cookie", blankCookie.serialize());
+
+  return res;
 }
+

@@ -1,10 +1,10 @@
-import type { SessionOptions } from "iron-session";
+import type { IronSessionOptions } from "iron-session";
 
-export const sessionOptions: SessionOptions = {
-  password: process.env.SESSION_SECRET!,
+export const sessionOptions: IronSessionOptions = {
+  password: process.env.SESSION_PASSWORD as string,
   cookieName: "bidbuild_session",
   cookieOptions: {
-    secure: process.env.NODE_ENV === "production",
+    secure: false, // IMPORTANT FIX
   },
 };
 
@@ -16,3 +16,4 @@ declare module "iron-session" {
     };
   }
 }
+
