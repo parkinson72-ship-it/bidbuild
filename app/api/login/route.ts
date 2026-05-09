@@ -1,30 +1,61 @@
-import { lucia } from "@/lib/auth";
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import bcrypt from "bcryptjs";
-import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { compare } from "bcryptjs";
 
-export async function POST(req: Request) {
-  const { email, password } = await req.json();
+export async function POST(request: Request) {
+    try {
+        const { email, password } = await request.json();
 
-  const user = await prisma.user.findUnique({
-    where: { email }
-  });
+        if (!email || !password) {
+            return new Response(
+                JSON.stringify({ error: "Missing email or password" }),
+                { status: 400 }
+            );
+        }
 
-  if (!user) {
-    return NextResponse.json({ error: "Invalid credentials" }, { status: 400 });
-  }
+        const user = await prisma.user.findUnique({
+            where: { email }
+        });
 
-  const valid = await bcrypt.compare(password, user.password);
+        if (!user) {
+            return new Response(
+                JSON.stringify({ error: "Invalid credentials" }),
+                { status: 401 }
+            );
+        }
 
-  if (!valid) {
-    return NextResponse.json({ error: "Invalid credentials" }, { status: 400 });
-  }
+        const validPassword = await compare(password, user.hashedPassword);
 
-  const session = await lucia.createSession(user.id, {});
-  const sessionCookie = lucia.createSessionCookie(session.id);
+        if (!validPassword) {
+            return new Response(
+                JSON.stringify({ error: "Invalid credentials" }),
+                { status: 401 }
+            );
+        }
 
-  const res = NextResponse.json({ success: true });
-  res.headers.append("Set-Cookie", sessionCookie.serialize());
+        // ⭐ Lucia v3 requires 2 args
+        const session = await auth.createSession(user.id, {});
 
-  return res;
+        // ⭐ Lucia v3 requires session.id, not session object
+        const sessionCookie = auth.createSessionCookie(session.id);
+
+        const cookieStore = await cookies();
+        cookieStore.set(
+            sessionCookie.name,
+            sessionCookie.value,
+            sessionCookie.attributes
+        );
+
+        return new Response(
+            JSON.stringify({ success: true }),
+            { status: 200 }
+        );
+    } catch (error) {
+        console.error("Login error:", error);
+        return new Response(
+            JSON.stringify({ error: "Internal server error" }),
+            { status: 500 }
+        );
+    }
 }

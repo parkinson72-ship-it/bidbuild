@@ -1,20 +1,34 @@
-import { lucia } from "@/lib/auth";
+import { auth } from "@/lib/auth";
 import { cookies } from "next/headers";
-import { NextResponse } from "next/server";
 
 export async function POST() {
-  const cookieStore = cookies();
-  const sessionId = cookieStore.get("bidbuild_session")?.value;
+    try {
+        const cookieStore = await cookies();
+        const sessionId = cookieStore.get("auth_session")?.value ?? null;
 
-  if (sessionId) {
-    await lucia.invalidateSession(sessionId);
-  }
+        if (!sessionId) {
+            return new Response(
+                JSON.stringify({ success: true }),
+                { status: 200 }
+            );
+        }
 
-  const blankCookie = lucia.createBlankSessionCookie();
+        // Delete session from Lucia
+        await auth.invalidateSession(sessionId);
 
-  const res = NextResponse.redirect("/login");
-  res.headers.append("Set-Cookie", blankCookie.serialize());
+        // Clear cookie
+        cookieStore.delete("auth_session");
 
-  return res;
+        return new Response(
+            JSON.stringify({ success: true }),
+            { status: 200 }
+        );
+    } catch (error) {
+        console.error("Logout error:", error);
+        return new Response(
+            JSON.stringify({ error: "Internal server error" }),
+            { status: 500 }
+        );
+    }
 }
 

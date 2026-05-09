@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import { lucia } from "@/lib/auth";
+import { auth } from "@/lib/auth";
 
 export async function validateRequest() {
   const cookieStore = cookies();
@@ -9,7 +9,7 @@ export async function validateRequest() {
     return { user: null, session: null };
   }
 
-  const { user, session } = await lucia.validateSession(sessionId);
+  const { user, session } = await auth.validateSession(sessionId);
 
   return { user, session };
 }

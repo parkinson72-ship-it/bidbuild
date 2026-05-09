@@ -1,6 +1,12 @@
-import { validateRequest } from "@/lib/validateRequest";
+import { validateRequest } from "@/lib/auth";
 
 export async function getCurrentUser() {
-  const { user } = await validateRequest();
-  return user;
+    const { user, session } = await validateRequest();
+
+    if (!session || !user) {
+        return null;
+    }
+
+    return user;
 }
+
