@@ -1,71 +1,48 @@
-import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { validateRequest } from "@/lib/auth";
+import { NextResponse } from "next/server";
 
-// GET all bids for a job
-export async function GET(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
-  const cookie = req.headers.get("cookie") || "";
-  const sessionId = auth.readSessionCookie(cookie);
-  const session = sessionId ? await auth.validateSession(sessionId) : null;
-
-  if (!session?.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const bids = await prisma.bid.findMany({
-    where: { jobId: params.id },
-    orderBy: { createdAt: "desc" },
-    include: {
-      user: {
-        select: { email: true },
-      },
-    },
-  });
-
-  return NextResponse.json({ bids });
-}
-
-// POST a new bid
 export async function POST(
   req: Request,
   { params }: { params: { id: string } }
 ) {
-  const cookie = req.headers.get("cookie") || "";
-  const sessionId = auth.readSessionCookie(cookie);
-  const session = sessionId ? await auth.validateSession(sessionId) : null;
+  const { user } = await validateRequest();
 
-  if (!session?.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!user) {
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
-  const { amount, message } = await req.json();
+  const jobId = params.id;
+  const body = await req.json();
+  const { amount, message } = body;
 
-  if (!amount || !message) {
+  if (!amount || isNaN(amount)) {
+    return NextResponse.json({ error: "Invalid bid amount" }, { status: 400 });
+  }
+
+  // Prevent duplicate bids from the same builder
+  const existingBid = await prisma.bid.findFirst({
+    where: {
+      jobId,
+      userId: user.id
+    }
+  });
+
+  if (existingBid) {
     return NextResponse.json(
-      { error: "Amount and message are required" },
+      { error: "You have already placed a bid on this job" },
       { status: 400 }
     );
   }
 
-  const job = await prisma.job.findUnique({
-    where: { id: params.id },
-  });
-
-  if (!job) {
-    return NextResponse.json({ error: "Job not found" }, { status: 404 });
-  }
-
   const bid = await prisma.bid.create({
     data: {
-      amount,
+      amount: Number(amount),
       message,
-      jobId: params.id,
-      userId: session.user.id,
-    },
+      jobId,
+      userId: user.id
+    }
   });
 
-  return NextResponse.json({ bid }, { status: 201 });
+  return NextResponse.json(bid);
 }

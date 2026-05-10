@@ -8,58 +8,60 @@ datasource db {
 }
 
 model User {
-  id        String    @id @default(uuid())
-  email     String    @unique
-  const storedHash = user.password ?? "";
+  id        String   @id @default(cuid())
+  email     String   @unique
   name      String?
-  createdAt DateTime  @default(now())
+  password  String
+  createdAt DateTime @default(now())
 
-  sessions  Session[]
-  keys      Key[]
+  messagesSent     Message[] @relation("SentMessages")
+  messagesReceived Message[] @relation("ReceivedMessages")
 
-  bids      Bid[]
   jobs      Job[]
+  sessions  Session[]
 }
 
 model Session {
-  id        String   @id @default(uuid())
+  id        String   @id @default(cuid())
   userId    String
   user      User     @relation(fields: [userId], references: [id])
   expiresAt DateTime
-  createdAt DateTime @default(now())
-}
-
-model Key {
-  id             String   @id
-  userId         String
-  hashedPassword String?
-
-  user           User     @relation(fields: [userId], references: [id])
-
-  @@unique([id, userId])
+  createdAt DateTime @default(now())   // ← THIS LINE FIXES YOUR WARNING
 }
 
 model Job {
-  id          String   @id @default(uuid())
+  id          String    @id @default(cuid())
   title       String
   description String
   budget      Int
-  createdAt   DateTime @default(now())
-  userId      String
+  location    String
+  createdAt   DateTime  @default(now())
 
-  user        User     @relation(fields: [userId], references: [id])
-  bids        Bid[]
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+
+  messages    Message[]
 }
 
-model Bid {
-  id        String   @id @default(uuid())
-  amount    Int
-  message   String
-  createdAt DateTime @default(now())
+model Message {
+  id          String   @id @default(cuid())
 
-  jobId     String
-  userId    String
+  jobId       String
+  job         Job      @relation(fields: [jobId], references: [id])
 
-  job       Job      @relation(fields: [jobId], references: [id])
-  user      User     @relation(fields: [userId], references: [id])
+  senderId    String
+  sender      User     @relation("SentMessages", fields: [senderId], references: [id])
+
+  recipientId String
+  recipient   User     @relation("ReceivedMessages", fields: [recipientId], references: [id])
+
+  content     String?
+  fileUrl     String?
+  fileName    String?
+  fileType    String?
+
+  createdAt   DateTime @default(now())
+  readAt      DateTime?
+
+  clientId    String?  @unique
 }

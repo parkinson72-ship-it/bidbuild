@@ -1,91 +1,57 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 
 export default function BidForm({ jobId }: { jobId: string }) {
-  const router = useRouter();
   const [amount, setAmount] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function submitBid(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
 
-    const res = await fetch(`/api/jobs/${jobId}/bids`, {
+    await fetch(`/api/jobs/${jobId}/bid`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        amount: Number(amount),
-        message,
-      }),
+      body: JSON.stringify({ amount, message }),
+      headers: {
+        "Content-Type": "application/json"
+      }
     });
 
+    setAmount("");
+    setMessage("");
     setLoading(false);
 
-    if (res.ok) {
-      setAmount("");
-      setMessage("");
-      router.refresh();
-    } else {
-      alert("Failed to submit bid");
-    }
+    // Refresh page to show new bid
+    window.location.reload();
   }
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: "0.75rem",
-        marginTop: "2rem",
-        padding: "1rem",
-        background: "#f5f5f5",
-        borderRadius: "8px",
-        border: "1px solid #ddd",
-      }}
-    >
-      <h2 style={{ margin: 0 }}>Place a Bid</h2>
+    <form onSubmit={submitBid} className="space-y-4 border p-4 rounded mt-8">
+      <h2 className="text-xl font-semibold">Place a Bid</h2>
 
       <input
         type="number"
         placeholder="Bid amount (£)"
         value={amount}
         onChange={(e) => setAmount(e.target.value)}
+        className="border p-2 w-full rounded"
         required
-        style={{
-          padding: "0.75rem",
-          borderRadius: "6px",
-          border: "1px solid #ccc",
-        }}
       />
 
       <textarea
-        placeholder="Message to homeowner"
+        placeholder="Message to the job owner"
         value={message}
         onChange={(e) => setMessage(e.target.value)}
+        className="border p-2 w-full rounded"
         required
-        rows={3}
-        style={{
-          padding: "0.75rem",
-          borderRadius: "6px",
-          border: "1px solid #ccc",
-        }}
       />
 
       <button
         type="submit"
         disabled={loading}
-        style={{
-          padding: "0.75rem",
-          background: "#0070f3",
-          color: "white",
-          border: "none",
-          borderRadius: "6px",
-          cursor: "pointer",
-        }}
+        className="bg-blue-600 text-white px-4 py-2 rounded"
       >
         {loading ? "Submitting..." : "Submit Bid"}
       </button>

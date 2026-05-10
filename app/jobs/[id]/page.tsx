@@ -1,70 +1,83 @@
-import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { deleteJob } from "./delete/action";
+import BidList from "@/components/BidList";
+import BidForm from "@/components/BidForm";
+import MarkMessagesRead from "@/components/MarkMessagesRead";
+import JobChat from "@/components/JobChat";
+import { validateRequest } from "@/lib/auth";
 
-type JobPageProps = {
-    params: {
-        id: string;
-    };
-};
+export default async function JobPage({ params }: { params: { id: string } }) {
+  const { user } = await validateRequest();
 
-export default async function JobPage({ params }: JobPageProps) {
-    const job = await prisma.job.findUnique({
-        where: { id: params.id }
-    });
-
-    if (!job) {
-        return (
-            <div className="max-w-2xl mx-auto py-10">
-                <h1 className="text-2xl font-bold mb-4">Job not found</h1>
-                <Link href="/dashboard" className="text-blue-600 underline">
-                    Back to dashboard
-                </Link>
-            </div>
-        );
+  const job = await prisma.job.findUnique({
+    where: { id: params.id },
+    include: {
+      user: true,
+      awardedBid: {
+        include: {
+          user: true
+        }
+      }
     }
+  });
 
-    return (
-        <div className="max-w-2xl mx-auto py-10 space-y-6">
-            <div className="flex items-center justify-between">
-                <h1 className="text-3xl font-bold">{job.title}</h1>
-                <span className="text-lg font-semibold">
-                    £{job.budget.toLocaleString()}
-                </span>
-            </div>
+  if (!job) {
+    return <div>Job not found</div>;
+  }
 
-            <p className="text-gray-700 whitespace-pre-line">
-                {job.description}
+  const isOwner = user?.id === job.userId;
+  const isAwardedContractor = user?.id === job.awardedBid?.userId;
+
+  return (
+    <div className="p-6 space-y-10">
+      {(isOwner || isAwardedContractor) && (
+        <MarkMessagesRead jobId={params.id} />
+      )}
+
+      <div>
+        <h1 className="text-3xl font-bold mb-2">{job.title}</h1>
+        <p className="text-gray-700 mb-4">{job.description}</p>
+
+        <p className="text-sm text-gray-500">
+          Posted by: {job.user.name || job.user.email}
+        </p>
+
+        {job.status === "AWARDED" && job.awardedBid && (
+          <div className="mt-4 p-4 bg-green-100 border border-green-300 rounded">
+            <p className="font-semibold text-green-800">
+              ✔ Job Awarded to{" "}
+              {job.awardedBid.user.name || job.awardedBid.user.email}
             </p>
+            <p className="text-green-700 mt-1">
+              Winning Bid: £{job.awardedBid.amount}
+            </p>
+          </div>
+        )}
+      </div>
 
-            <div className="text-sm text-gray-500">
-                Created: {job.createdAt.toLocaleString()}
-            </div>
+      <div>
+        <h2 className="text-2xl font-semibold mb-4">Bids</h2>
+        <BidList jobId={params.id} />
+      </div>
 
-            <div className="flex gap-4">
-                <Link
-                    href={`/jobs/${job.id}/edit`}
-                    className="bg-blue-600 text-white px-4 py-2 rounded"
-                >
-                    Edit Job
-                </Link>
-
-                <form action={async () => deleteJob(job.id)}>
-                    <button
-                        type="submit"
-                        className="bg-red-600 text-white px-4 py-2 rounded"
-                    >
-                        Delete Job
-                    </button>
-                </form>
-
-                <Link
-                    href="/dashboard"
-                    className="ml-auto text-gray-600 underline"
-                >
-                    Back to dashboard
-                </Link>
-            </div>
+      {job.status !== "AWARDED" && (
+        <div>
+          <h2 className="text-2xl font-semibold mb-4">Place a Bid</h2>
+          <BidForm jobId={params.id} />
         </div>
-    );
+      )}
+
+      {(isOwner || isAwardedContractor) && (
+        <div className="space-y-6">
+          <h2 className="text-2xl font-semibold">Messages</h2>
+
+          <JobChat
+            jobId={params.id}
+            recipientId={
+              isOwner ? job.awardedBid?.userId || "" : job.userId
+            }
+          />
+        </div>
+      )}
+    </div>
+  );
 }
