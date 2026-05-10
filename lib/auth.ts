@@ -3,10 +3,8 @@ import { PrismaAdapter } from "@lucia-auth/adapter-prisma";
 import { prisma } from "@/lib/prisma";
 import { cookies } from "next/headers";
 
-// Lucia adapter using Prisma models
 const adapter = new PrismaAdapter(prisma.session, prisma.user);
 
-// Main Lucia instance
 export const auth = new Lucia(adapter, {
     sessionCookie: {
         attributes: {
@@ -20,7 +18,6 @@ export const auth = new Lucia(adapter, {
     }
 });
 
-// Next.js App Router request wrapper
 export const validateRequest = async () => {
     const cookieStore = await cookies();
     const sessionId = cookieStore.get("auth_session")?.value ?? null;
@@ -41,7 +38,6 @@ export const validateRequest = async () => {
     return { user, session };
 };
 
-// Lucia module augmentation
 declare module "lucia" {
     interface Register {
         Lucia: typeof auth;

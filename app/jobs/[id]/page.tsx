@@ -1,177 +1,70 @@
+import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
-import { redirect } from "next/navigation";
+import { deleteJob } from "./delete/action";
 
-export default async function JobDetailsPage({
-  params,
-}: {
-  params: { id: string };
-}) {
-  const cookieHeader = headers().get("cookie") || "";
-  const sessionId = auth.readSessionCookie(cookieHeader);
-  const session = sessionId ? await auth.validateSession(sessionId) : null;
+type JobPageProps = {
+    params: {
+        id: string;
+    };
+};
 
-  const job = await prisma.job.findUnique({
-    where: { id: params.id },
-    include: {
-      user: true,
-      bids: {
-        include: {
-          user: {
-            include: {
-              profile: true,
-            },
-          },
-        },
-        orderBy: { createdAt: "desc" },
-      },
-      acceptedBid: true,
-    },
-  });
-
-  if (!job) {
-    return (
-      <div style={{ padding: "2rem" }}>
-        <h1>Job not found</h1>
-      </div>
-    );
-  }
-
-  const jobId = job.id;
-  const isOwner = session?.user?.id === job.userId;
-
-  // -----------------------------
-  // ACCEPT BID SERVER ACTION
-  // -----------------------------
-  async function acceptBid(formData: FormData) {
-    "use server";
-
-    const bidId = formData.get("bidId") as string;
-
-    await prisma.job.update({
-      where: { id: jobId },
-      data: {
-        acceptedBidId: bidId,
-        status: "ASSIGNED",
-      },
+export default async function JobPage({ params }: JobPageProps) {
+    const job = await prisma.job.findUnique({
+        where: { id: params.id }
     });
 
-    redirect(`/jobs/${jobId}`);
-  }
-
-  return (
-    <div style={{ padding: "2rem", maxWidth: "800px", margin: "0 auto" }}>
-      <h1>{job.title}</h1>
-      <p style={{ color: "#666" }}>{job.description}</p>
-
-      <p>
-        <strong>Budget:</strong> £{job.budget}
-      </p>
-      <p>
-        <strong>Location:</strong> {job.location}
-      </p>
-
-      <hr style={{ margin: "2rem 0" }} />
-
-      <h2>Bids</h2>
-
-      {job.bids.length === 0 && <p>No bids yet.</p>}
-
-      {job.bids.map((bid) => {
-        const builder = bid.user;
-        const profile = builder.profile;
-
+    if (!job) {
         return (
-          <div
-  key={bid.id}
-  style={{
-    padding: "1rem",
-    border: "1px solid #ddd",
-    borderRadius: "6px",
-    marginBottom: "1rem",
-    background: "#fafafa",
-  }}
->
-
-            <p>
-              <strong>Amount:</strong> £{bid.amount}
-            </p>
-
-            <p>
-              <strong>Message:</strong> {bid.message}
-            </p>
-
-            <hr style={{ margin: "1rem 0" }} />
-
-            <h3>Builder Info</h3>
-
-            <p>
-              <strong>Email:</strong> {builder.email}
-            </p>
-
-            {profile ? (
-              <>
-                <p>
-                  <strong>Trade:</strong> {profile.trade}
-                </p>
-                <p>
-                  <strong>Experience:</strong> {profile.experience} years
-                </p>
-                {profile.bio && (
-                  <p>
-                    <strong>Bio:</strong> {profile.bio}
-                  </p>
-                )}
-                <p style={{ marginTop: "0.5rem" }}>
-                  <a
-                    href={`/builder/${builder.id}`}
-                    style={{ color: "#0070f3", textDecoration: "underline" }}
-                  >
-                    View Full Profile →
-                  </a>
-                </p>
-              </>
-            ) : (
-              <p style={{ color: "red" }}>
-                This builder has not created a profile yet.
-              </p>
-            )}
-
-            {job.acceptedBidId === bid.id && (
-              <p
-                style={{
-                  marginTop: "1rem",
-                  padding: "0.5rem",
-                  background: "#d1ffd1",
-                  borderRadius: "4px",
-                }}
-              >
-                ✔ This is the accepted bid
-              </p>
-            )}
-
-            {isOwner && job.acceptedBidId === null && (
-              <form action={acceptBid} style={{ marginTop: "1rem" }}>
-                <input type="hidden" name="bidId" value={bid.id} />
-                <button
-                  type="submit"
-                  style={{
-                    padding: "0.5rem 1rem",
-                    background: "#0070f3",
-                    color: "white",
-                    border: "none",
-                    borderRadius: "4px",
-                    cursor: "pointer",
-                  }}
-                >
-                  Accept Bid
-                </button>
-              </form>
-            )}
-          </div>
+            <div className="max-w-2xl mx-auto py-10">
+                <h1 className="text-2xl font-bold mb-4">Job not found</h1>
+                <Link href="/dashboard" className="text-blue-600 underline">
+                    Back to dashboard
+                </Link>
+            </div>
         );
-      })}
-    </div>
-  );
+    }
+
+    return (
+        <div className="max-w-2xl mx-auto py-10 space-y-6">
+            <div className="flex items-center justify-between">
+                <h1 className="text-3xl font-bold">{job.title}</h1>
+                <span className="text-lg font-semibold">
+                    £{job.budget.toLocaleString()}
+                </span>
+            </div>
+
+            <p className="text-gray-700 whitespace-pre-line">
+                {job.description}
+            </p>
+
+            <div className="text-sm text-gray-500">
+                Created: {job.createdAt.toLocaleString()}
+            </div>
+
+            <div className="flex gap-4">
+                <Link
+                    href={`/jobs/${job.id}/edit`}
+                    className="bg-blue-600 text-white px-4 py-2 rounded"
+                >
+                    Edit Job
+                </Link>
+
+                <form action={async () => deleteJob(job.id)}>
+                    <button
+                        type="submit"
+                        className="bg-red-600 text-white px-4 py-2 rounded"
+                    >
+                        Delete Job
+                    </button>
+                </form>
+
+                <Link
+                    href="/dashboard"
+                    className="ml-auto text-gray-600 underline"
+                >
+                    Back to dashboard
+                </Link>
+            </div>
+        </div>
+    );
 }

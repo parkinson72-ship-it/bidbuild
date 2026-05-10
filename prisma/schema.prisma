@@ -10,7 +10,7 @@ datasource db {
 model User {
   id        String    @id @default(uuid())
   email     String    @unique
-  password  String?
+  const storedHash = user.password ?? "";
   name      String?
   createdAt DateTime  @default(now())
 
