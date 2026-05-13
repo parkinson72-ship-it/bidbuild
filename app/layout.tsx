@@ -7,7 +7,7 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const user = await getCurrentUser();
+  const user = await getCurrentUser(); // now User | null
 
   return (
     <html lang="en">

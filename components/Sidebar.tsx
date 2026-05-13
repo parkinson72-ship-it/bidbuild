@@ -1,5 +1,4 @@
 import Link from "next/link";
-import type { User } from "lucia";
 
 export default function Sidebar({ user }: { user: User | null }) {
   return (

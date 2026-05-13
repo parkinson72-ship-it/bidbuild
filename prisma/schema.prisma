@@ -1,67 +1,83 @@
+// ------------------------------------------------------
+//  Prisma Schema for Auth.js v5 + Prisma Adapter
+//  Includes:
+//  - User (with roles)
+//  - Account (OAuth)
+//  - Session (DB sessions)
+//  - VerificationToken (optional but recommended)
+//  - Password field for credentials auth
+// ------------------------------------------------------
+
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
+
+// ------------------------------------------------------
+//  USER MODEL
+// ------------------------------------------------------
 
 model User {
   id        String   @id @default(cuid())
-  email     String   @unique
   name      String?
-  password  String
+  email     String   @unique
+  password  String?  // null for OAuth users
+  image     String?
+  role      String   @default("user")
   createdAt DateTime @default(now())
 
-  messagesSent     Message[] @relation("SentMessages")
-  messagesReceived Message[] @relation("ReceivedMessages")
-
-  jobs      Job[]
+  accounts  Account[]
   sessions  Session[]
 }
 
+// ------------------------------------------------------
+//  ACCOUNT MODEL (OAuth)
+// ------------------------------------------------------
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+// ------------------------------------------------------
+//  SESSION MODEL (Database Sessions)
+// ------------------------------------------------------
+
 model Session {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  expiresAt DateTime
-  createdAt DateTime @default(now())   // ← THIS LINE FIXES YOUR WARNING
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-model Job {
-  id          String    @id @default(cuid())
-  title       String
-  description String
-  budget      Int
-  location    String
-  createdAt   DateTime  @default(now())
+// ------------------------------------------------------
+//  VERIFICATION TOKEN (Email flows, optional but recommended)
+// ------------------------------------------------------
 
-  userId      String
-  user        User      @relation(fields: [userId], references: [id])
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
 
-  messages    Message[]
-}
-
-model Message {
-  id          String   @id @default(cuid())
-
-  jobId       String
-  job         Job      @relation(fields: [jobId], references: [id])
-
-  senderId    String
-  sender      User     @relation("SentMessages", fields: [senderId], references: [id])
-
-  recipientId String
-  recipient   User     @relation("ReceivedMessages", fields: [recipientId], references: [id])
-
-  content     String?
-  fileUrl     String?
-  fileName    String?
-  fileType    String?
-
-  createdAt   DateTime @default(now())
-  readAt      DateTime?
-
-  clientId    String?  @unique
+  @@unique([identifier, token])
 }

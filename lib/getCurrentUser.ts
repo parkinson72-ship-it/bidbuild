@@ -1,12 +1,7 @@
-import { validateRequest } from "@/lib/auth";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
 export async function getCurrentUser() {
-    const { user, session } = await validateRequest();
-
-    if (!session || !user) {
-        return null;
-    }
-
-    return user;
+  const session = await getServerSession(authOptions);
+  return session?.user ?? null;
 }
-

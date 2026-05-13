@@ -1,48 +1,77 @@
-import { Lucia } from "lucia";
-import { PrismaAdapter } from "@lucia-auth/adapter-prisma";
-import { prisma } from "@/lib/prisma";
-import { cookies } from "next/headers";
+// lib/auth.ts
+import { NextAuthOptions } from "next-auth";
+import CredentialsProvider from "next-auth/providers/credentials";
+import prisma from "@/lib/prisma";
+import { compare } from "bcryptjs";
 
-const adapter = new PrismaAdapter(prisma.session, prisma.user);
-
-export const auth = new Lucia(adapter, {
-    sessionCookie: {
-        attributes: {
-            secure: process.env.NODE_ENV === "production"
-        }
-    },
-    getUserAttributes: (user) => {
-        return {
-            email: user.email
-        };
-    }
-});
-
-export const validateRequest = async () => {
-    const cookieStore = await cookies();
-    const sessionId = cookieStore.get("auth_session")?.value ?? null;
-
-    if (!sessionId) {
-        return {
-            user: null,
-            session: null
-        };
-    }
-
-    const { session, user } = await auth.validateSession(sessionId);
-
-    if (!session) {
-        cookieStore.delete("auth_session");
-    }
-
-    return { user, session };
-};
-
-declare module "lucia" {
-    interface Register {
-        Lucia: typeof auth;
-        DatabaseUserAttributes: {
-            email: string;
-        };
-    }
+// Extend the default session type so TS knows user.id exists
+declare module "next-auth" {
+  interface Session {
+    user: {
+      id: string;
+      name: string | null;
+      email: string | null;
+    };
+  }
 }
+
+export const authOptions: NextAuthOptions = {
+  session: {
+    strategy: "jwt",
+  },
+
+  providers: [
+    CredentialsProvider({
+      name: "credentials",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" },
+      },
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) return null;
+
+        const user = await prisma.user.findUnique({
+          where: { email: credentials.email },
+        });
+
+        if (!user) return null;
+
+        // Prevent null password error
+        if (!user.password) return null;
+
+        const isValid = await compare(credentials.password, user.password);
+        if (!isValid) return null;
+
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+        };
+      },
+    }),
+  ],
+
+  pages: {
+    signIn: "/login",
+  },
+
+  callbacks: {
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id;
+      }
+      return token;
+    },
+
+    async session({ session, token }) {
+      // Guarantee session.user exists
+      session.user = {
+        id: token.id as string,
+        name: session.user?.name ?? null,
+        email: session.user?.email ?? null,
+      };
+
+      return session;
+    },
+  },
+};

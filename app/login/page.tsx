@@ -1,71 +1,47 @@
-"use client";
-
-import { useState } from "react";
-
+// app/login/page.tsx
 export default function LoginPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError("");
-
-    const res = await fetch("/api/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password })
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      setError(data.error || "Login failed");
-      return;
-    }
-
-    // Redirect to dashboard or jobs
-    window.location.href = "/jobs";
-  }
-
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-4">
-      <h1 className="text-3xl font-bold mb-6">Login</h1>
+    <main style={{ maxWidth: 400, margin: "4rem auto", fontFamily: "sans-serif" }}>
+      <h1 style={{ marginBottom: "1rem" }}>Login</h1>
+      <form method="post" action="/api/auth/callback/credentials">
+        <div style={{ marginBottom: "0.75rem" }}>
+          <label htmlFor="email" style={{ display: "block", marginBottom: "0.25rem" }}>
+            Email
+          </label>
+          <input
+            id="email"
+            name="email"
+            type="email"
+            required
+            style={{ width: "100%", padding: "0.5rem" }}
+          />
+        </div>
 
-      <form
-        onSubmit={handleSubmit}
-        className="flex flex-col gap-3 w-full max-w-sm"
-      >
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="border p-2 rounded"
-          required
-        />
-
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="border p-2 rounded"
-          required
-        />
-
-        {error && (
-          <p className="text-red-500 text-sm text-center">{error}</p>
-        )}
+        <div style={{ marginBottom: "0.75rem" }}>
+          <label htmlFor="password" style={{ display: "block", marginBottom: "0.25rem" }}>
+            Password
+          </label>
+          <input
+            id="password"
+            name="password"
+            type="password"
+            required
+            style={{ width: "100%", padding: "0.5rem" }}
+          />
+        </div>
 
         <button
           type="submit"
-          className="bg-blue-600 text-white p-2 rounded hover:bg-blue-700"
+          style={{
+            marginTop: "0.5rem",
+            padding: "0.5rem 1rem",
+            cursor: "pointer",
+          }}
         >
-          Login
+          Sign in
         </button>
       </form>
-    </div>
+    </main>
   );
 }
 

@@ -12,4 +12,5 @@ declare global {
     | undefined;
 }
 
+// IMPORTANT: this MUST be at the bottom
 export {};
