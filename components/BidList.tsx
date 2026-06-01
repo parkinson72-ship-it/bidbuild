@@ -5,6 +5,7 @@ type BidWithUser = {
   id: string;
   amount: number;
   message: string;
+  status: string | null;
   user: {
     id: string;
     name: string | null;
@@ -20,10 +21,6 @@ export default async function BidList({ jobId }: { jobId: string }) {
     },
     orderBy: { amount: "asc" }
   })) as BidWithUser[];
-
-  const job = await prisma.job.findUnique({
-    where: { id: jobId }
-  });
 
   if (!bids.length) {
     return <p>No bids yet.</p>;
@@ -43,11 +40,11 @@ export default async function BidList({ jobId }: { jobId: string }) {
             By: {bid.user.name || bid.user.email}
           </p>
 
-          {job?.awardedBidId === bid.id && (
+          {bid.status === "ACCEPTED" && (
             <p className="text-green-700 font-bold">✔ Awarded</p>
           )}
 
-          {job?.awardedBidId !== bid.id && (
+          {bid.status !== "ACCEPTED" && (
             <AwardButton jobId={jobId} bidId={bid.id} />
           )}
         </div>

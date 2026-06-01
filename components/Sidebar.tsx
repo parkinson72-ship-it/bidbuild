@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { User } from "@prisma/client";
 
 export default function Sidebar({ user }: { user: User | null }) {
   return (

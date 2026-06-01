@@ -1,20 +1,10 @@
-// ------------------------------------------------------
-//  Prisma Schema for Auth.js v5 + Prisma Adapter
-//  Includes:
-//  - User (with roles)
-//  - Account (OAuth)
-//  - Session (DB sessions)
-//  - VerificationToken (optional but recommended)
-//  - Password field for credentials auth
-// ------------------------------------------------------
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider          = "postgresql"
+  url               = env("DATABASE_URL")
 }
 
 // ------------------------------------------------------
@@ -25,13 +15,118 @@ model User {
   id        String   @id @default(cuid())
   name      String?
   email     String   @unique
-  password  String?  // null for OAuth users
+  password  String?
   image     String?
   role      String   @default("user")
   createdAt DateTime @default(now())
 
-  accounts  Account[]
-  sessions  Session[]
+  accounts Account[]
+  sessions Session[]
+  jobs     Job[]
+  bids     Bid[]
+  messages Message[]
+
+  profile  Profile?
+}
+
+// ------------------------------------------------------
+//  PROFILE MODEL
+// ------------------------------------------------------
+
+model Profile {
+  id         String   @id @default(cuid())
+  trade      String
+  experience Int
+  bio        String?
+
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id])
+}
+
+// ------------------------------------------------------
+//  JOB MODEL
+// ------------------------------------------------------
+
+model Job {
+  id          String     @id @default(cuid())
+  title       String
+  description String
+  budget      Int
+  location    String
+  category    String
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  status JobStatus @default(OPEN)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  bids         Bid[]
+  conversation Conversation?
+}
+
+enum JobStatus {
+  OPEN
+  AWARDED
+  IN_PROGRESS
+  COMPLETED_PENDING
+  COMPLETED
+}
+
+// ------------------------------------------------------
+//  BID MODEL
+// ------------------------------------------------------
+
+model Bid {
+  id        String    @id @default(cuid())
+  amount    Int
+  message   String
+  status    BidStatus @default(PENDING)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  userId String
+  user   User @relation(fields: [userId], references: [id])
+
+  jobId String
+  job   Job  @relation(fields: [jobId], references: [id])
+}
+
+enum BidStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+// ------------------------------------------------------
+//  CONVERSATION MODEL
+// ------------------------------------------------------
+
+model Conversation {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  jobId String @unique
+  job   Job    @relation(fields: [jobId], references: [id])
+
+  messages Message[]
+}
+
+// ------------------------------------------------------
+//  MESSAGE MODEL
+// ------------------------------------------------------
+
+model Message {
+  id        String   @id @default(cuid())
+  content   String
+  createdAt DateTime @default(now())
+
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+
+  userId String
+  user   User @relation(fields: [userId], references: [id])
 }
 
 // ------------------------------------------------------
@@ -58,7 +153,7 @@ model Account {
 }
 
 // ------------------------------------------------------
-//  SESSION MODEL (Database Sessions)
+//  SESSION MODEL
 // ------------------------------------------------------
 
 model Session {
@@ -71,7 +166,7 @@ model Session {
 }
 
 // ------------------------------------------------------
-//  VERIFICATION TOKEN (Email flows, optional but recommended)
+//  VERIFICATION TOKEN
 // ------------------------------------------------------
 
 model VerificationToken {

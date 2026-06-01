@@ -1,16 +1,27 @@
 "use server";
 
-import { prisma } from "@/lib/prisma";
-import { validateRequest } from "@/lib/auth";
+import prisma from "@/lib/prisma";
+import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 
 export async function deleteJob(id: string) {
-    const { user } = await validateRequest();
-    if (!user) redirect("/login");
+  const session = await auth();
+  const user = session?.user;
 
-    await prisma.job.delete({
-        where: { id }
-    });
+  if (!user) redirect("/login");
 
+  // Optional: ensure the job belongs to the logged‑in user
+  const job = await prisma.job.findUnique({
+    where: { id },
+  });
+
+  if (!job || job.userId !== user.id) {
     redirect("/dashboard");
+  }
+
+  await prisma.job.delete({
+    where: { id },
+  });
+
+  redirect("/dashboard");
 }

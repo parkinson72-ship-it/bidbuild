@@ -1,17 +1,21 @@
 "use client";
 
+import { signOut } from "next-auth/react";
+
 export default function LogoutButton() {
-  async function handleLogout() {
-    await fetch("/api/logout", {
-      method: "POST",
-    });
-
-    window.location.href = "/login";
-  }
-
   return (
-    <button onClick={handleLogout} style={{ marginTop: "20px" }}>
+    <button
+      onClick={() => signOut({ callbackUrl: "/login" })}
+      style={{
+        padding: "8px 14px",
+        background: "black",
+        color: "white",
+        border: "none",
+        cursor: "pointer",
+      }}
+    >
       Logout
     </button>
   );
 }
+

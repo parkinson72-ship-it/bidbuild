@@ -1,17 +1,19 @@
-import { prisma } from "@/lib/prisma";
-import { validateRequest } from "@/lib/auth";
+import prisma from "@/lib/prisma";
+import { auth } from "@/auth";
 import { redirect, notFound } from "next/navigation";
 
 export default async function EditJobPage({
-  params
+  params,
 }: {
   params: { id: string };
 }) {
-  const { user } = await validateRequest();
+  const session = await auth();
+  const user = session?.user;
+
   if (!user) redirect("/login");
 
   const job = await prisma.job.findUnique({
-    where: { id: params.id }
+    where: { id: params.id },
   });
 
   if (!job || job.userId !== user.id) {
@@ -32,8 +34,8 @@ export default async function EditJobPage({
       data: {
         title,
         description,
-        budget
-      }
+        budget,
+      },
     });
 
     redirect(`/jobs/${jobId}`);

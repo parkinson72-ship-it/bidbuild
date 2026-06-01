@@ -1,28 +1,12 @@
-// lib/auth.ts
-import { NextAuthOptions } from "next-auth";
-import CredentialsProvider from "next-auth/providers/credentials";
-import prisma from "@/lib/prisma";
 import { compare } from "bcryptjs";
-
-// Extend the default session type so TS knows user.id exists
-declare module "next-auth" {
-  interface Session {
-    user: {
-      id: string;
-      name: string | null;
-      email: string | null;
-    };
-  }
-}
+import CredentialsProvider from "next-auth/providers/credentials";
+import NextAuth, { type NextAuthOptions } from "next-auth";
+import prisma from "@/lib/prisma";
 
 export const authOptions: NextAuthOptions = {
-  session: {
-    strategy: "jwt",
-  },
-
   providers: [
     CredentialsProvider({
-      name: "credentials",
+      name: "Credentials",
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
@@ -34,23 +18,26 @@ export const authOptions: NextAuthOptions = {
           where: { email: credentials.email },
         });
 
-        if (!user) return null;
+        if (!user || !user.password) return null;
 
-        // Prevent null password error
-        if (!user.password) return null;
-
-        const isValid = await compare(credentials.password, user.password);
-        if (!isValid) return null;
+        const valid = await compare(credentials.password, user.password);
+        if (!valid) return null;
 
         return {
           id: user.id,
           email: user.email,
           name: user.name,
+          image: user.image,
         };
       },
     }),
   ],
 
+  session: {
+    strategy: "jwt",
+  },
+
+  // ⭐ REQUIRED FOR APP ROUTER — FIXES REDIRECT LOOP ⭐
   pages: {
     signIn: "/login",
   },
@@ -64,14 +51,14 @@ export const authOptions: NextAuthOptions = {
     },
 
     async session({ session, token }) {
-      // Guarantee session.user exists
-      session.user = {
-        id: token.id as string,
-        name: session.user?.name ?? null,
-        email: session.user?.email ?? null,
-      };
-
+      if (session.user && token?.id) {
+        session.user.id = token.id as string;
+      }
       return session;
     },
   },
 };
+
+const handler = NextAuth(authOptions);
+
+export { handler as GET, handler as POST };

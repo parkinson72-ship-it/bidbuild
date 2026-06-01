@@ -1,47 +1,76 @@
-// app/login/page.tsx
+"use client";
+
+import { useState } from "react";
+import { signIn } from "next-auth/react";
+
 export default function LoginPage() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+
+    const result = await signIn("credentials", {
+      redirect: false,
+      email,
+      password,
+    });
+
+    if (result?.error) {
+      setError("Invalid email or password");
+      return;
+    }
+
+    window.location.href = "/dashboard";
+  }
+
   return (
-    <main style={{ maxWidth: 400, margin: "4rem auto", fontFamily: "sans-serif" }}>
-      <h1 style={{ marginBottom: "1rem" }}>Login</h1>
-      <form method="post" action="/api/auth/callback/credentials">
-        <div style={{ marginBottom: "0.75rem" }}>
-          <label htmlFor="email" style={{ display: "block", marginBottom: "0.25rem" }}>
-            Email
-          </label>
+    <div style={{ maxWidth: 400, margin: "80px auto", padding: 20 }}>
+      <h1 style={{ marginBottom: 20 }}>Login</h1>
+
+      <form onSubmit={handleSubmit}>
+        <div style={{ marginBottom: 15 }}>
+          <label>Email</label>
           <input
-            id="email"
-            name="email"
             type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             required
-            style={{ width: "100%", padding: "0.5rem" }}
+            style={{ width: "100%", padding: 8 }}
           />
         </div>
 
-        <div style={{ marginBottom: "0.75rem" }}>
-          <label htmlFor="password" style={{ display: "block", marginBottom: "0.25rem" }}>
-            Password
-          </label>
+        <div style={{ marginBottom: 15 }}>
+          <label>Password</label>
           <input
-            id="password"
-            name="password"
             type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
             required
-            style={{ width: "100%", padding: "0.5rem" }}
+            style={{ width: "100%", padding: 8 }}
           />
         </div>
+
+        {error && (
+          <p style={{ color: "red", marginBottom: 10 }}>{error}</p>
+        )}
 
         <button
           type="submit"
           style={{
-            marginTop: "0.5rem",
-            padding: "0.5rem 1rem",
+            width: "100%",
+            padding: 10,
+            background: "black",
+            color: "white",
+            border: "none",
             cursor: "pointer",
           }}
         >
-          Sign in
+          Login
         </button>
       </form>
-    </main>
+    </div>
   );
 }
-

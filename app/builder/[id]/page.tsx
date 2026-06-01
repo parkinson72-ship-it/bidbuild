@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+import prisma from "@/lib/prisma";
 import { notFound } from "next/navigation";
 
 export default async function PublicBuilderProfilePage({
@@ -25,9 +25,7 @@ export default async function PublicBuilderProfilePage({
 
   return (
     <div style={{ padding: "2rem", maxWidth: "700px", margin: "0 auto" }}>
-      <h1 style={{ marginBottom: "0.5rem" }}>
-        Builder Profile
-      </h1>
+      <h1 style={{ marginBottom: "0.5rem" }}>Builder Profile</h1>
 
       <p style={{ color: "#666", marginBottom: "2rem" }}>
         Viewing builder: <strong>{builder.email}</strong>
@@ -66,7 +64,7 @@ export default async function PublicBuilderProfilePage({
           <p>This builder has not completed any jobs yet.</p>
         ) : (
           <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-            {builder.jobs.map((job) => (
+            {builder.jobs.map((job: any) => (
               <li
                 key={job.id}
                 style={{

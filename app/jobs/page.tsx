@@ -1,50 +1,39 @@
-import { validateRequest } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
-import { redirect } from "next/navigation";
 
 export default async function JobsPage() {
-  const { user } = await validateRequest();
-
-  if (!user) {
-    redirect("/login");
-  }
-
   const jobs = await prisma.job.findMany({
-    where: { userId: user.id },
-    orderBy: { createdAt: "desc" }
+    orderBy: { createdAt: "desc" },
   });
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Your Jobs</h1>
-
-        <Link
-          href="/jobs/new"
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-        >
-          Create Job
-        </Link>
-      </div>
+    <div className="max-w-4xl mx-auto p-10">
+      <h1 className="text-3xl font-bold mb-6">Available Jobs</h1>
 
       {jobs.length === 0 && (
-        <p className="text-gray-500">You have no jobs yet.</p>
+        <p className="text-gray-600">No jobs have been posted yet.</p>
       )}
 
-      <ul className="space-y-4">
+      <div className="space-y-4">
         {jobs.map((job) => (
-          <li
+          <Link
             key={job.id}
-            className="border p-4 rounded hover:bg-gray-50 transition"
+            href={`/jobs/${job.id}`}
+            className="block border rounded p-4 bg-white shadow hover:shadow-md transition"
           >
-            <Link href={`/jobs/${job.id}`}>
-              <h2 className="font-semibold text-lg">{job.title}</h2>
-              <p className="text-gray-600 text-sm">{job.description}</p>
-            </Link>
-          </li>
+            <h2 className="text-xl font-semibold">{job.title}</h2>
+            <p className="text-gray-700 mt-1 line-clamp-2">
+              {job.description}
+            </p>
+
+            <div className="flex items-center justify-between mt-3 text-sm text-gray-600">
+              <span>£{job.budget}</span>
+              <span>{job.location}</span>
+              <span className="italic">{job.category}</span>
+            </div>
+          </Link>
         ))}
-      </ul>
+      </div>
     </div>
   );
 }

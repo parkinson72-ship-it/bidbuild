@@ -1,19 +1,12 @@
-import type { IronSessionOptions } from "iron-session";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
-export const sessionOptions: IronSessionOptions = {
-  password: process.env.SESSION_PASSWORD as string,
-  cookieName: "bidbuild_session",
-  cookieOptions: {
-    secure: false, // IMPORTANT FIX
-  },
-};
+export async function getSession() {
+  return await getServerSession(authOptions);
+}
 
-declare module "iron-session" {
-  interface IronSessionData {
-    user?: {
-      id: number;
-      email: string;
-    };
-  }
+export async function getCurrentUser() {
+  const session = await getServerSession(authOptions);
+  return session?.user ?? null;
 }
 

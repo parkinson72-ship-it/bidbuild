@@ -1,83 +1,37 @@
 import { prisma } from "@/lib/prisma";
-import BidList from "@/components/BidList";
-import BidForm from "@/components/BidForm";
-import MarkMessagesRead from "@/components/MarkMessagesRead";
-import JobChat from "@/components/JobChat";
-import { validateRequest } from "@/lib/auth";
+import { notFound } from "next/navigation";
 
-export default async function JobPage({ params }: { params: { id: string } }) {
-  const { user } = await validateRequest();
-
+export default async function JobDetailsPage({
+  params,
+}: {
+  params: { id: string };
+}) {
   const job = await prisma.job.findUnique({
     where: { id: params.id },
-    include: {
-      user: true,
-      awardedBid: {
-        include: {
-          user: true
-        }
-      }
-    }
   });
 
-  if (!job) {
-    return <div>Job not found</div>;
-  }
-
-  const isOwner = user?.id === job.userId;
-  const isAwardedContractor = user?.id === job.awardedBid?.userId;
+  if (!job) return notFound();
 
   return (
-    <div className="p-6 space-y-10">
-      {(isOwner || isAwardedContractor) && (
-        <MarkMessagesRead jobId={params.id} />
-      )}
+    <div className="max-w-3xl mx-auto p-10">
+      <h1 className="text-3xl font-bold mb-4">{job.title}</h1>
 
-      <div>
-        <h1 className="text-3xl font-bold mb-2">{job.title}</h1>
-        <p className="text-gray-700 mb-4">{job.description}</p>
+      <div className="space-y-4 bg-white p-6 rounded shadow">
+        <p className="text-gray-800 whitespace-pre-line">{job.description}</p>
 
-        <p className="text-sm text-gray-500">
-          Posted by: {job.user.name || job.user.email}
-        </p>
-
-        {job.status === "AWARDED" && job.awardedBid && (
-          <div className="mt-4 p-4 bg-green-100 border border-green-300 rounded">
-            <p className="font-semibold text-green-800">
-              ✔ Job Awarded to{" "}
-              {job.awardedBid.user.name || job.awardedBid.user.email}
-            </p>
-            <p className="text-green-700 mt-1">
-              Winning Bid: £{job.awardedBid.amount}
-            </p>
-          </div>
-        )}
-      </div>
-
-      <div>
-        <h2 className="text-2xl font-semibold mb-4">Bids</h2>
-        <BidList jobId={params.id} />
-      </div>
-
-      {job.status !== "AWARDED" && (
-        <div>
-          <h2 className="text-2xl font-semibold mb-4">Place a Bid</h2>
-          <BidForm jobId={params.id} />
+        <div className="flex gap-6 text-gray-700">
+          <span className="font-medium">Budget:</span> £{job.budget}
         </div>
-      )}
 
-      {(isOwner || isAwardedContractor) && (
-        <div className="space-y-6">
-          <h2 className="text-2xl font-semibold">Messages</h2>
-
-          <JobChat
-            jobId={params.id}
-            recipientId={
-              isOwner ? job.awardedBid?.userId || "" : job.userId
-            }
-          />
+        <div className="flex gap-6 text-gray-700">
+          <span className="font-medium">Location:</span> {job.location}
         </div>
-      )}
+
+        <div className="flex gap-6 text-gray-700">
+          <span className="font-medium">Category:</span> {job.category}
+        </div>
+      </div>
     </div>
   );
 }
+
