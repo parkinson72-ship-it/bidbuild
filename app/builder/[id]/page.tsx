@@ -27,6 +27,15 @@ export default async function PublicBuilderProfilePage({
     <div style={{ padding: "2rem", maxWidth: "700px", margin: "0 auto" }}>
       <h1 style={{ marginBottom: "0.5rem" }}>Builder Profile</h1>
 
+      {builder.image && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={builder.image}
+          alt="Builder profile photo"
+          style={{ width: 96, height: 96, borderRadius: "50%", objectFit: "cover", marginBottom: "1rem" }}
+        />
+      )}
+
       <p style={{ color: "#666", marginBottom: "2rem" }}>
         Viewing builder: <strong>{builder.email}</strong>
       </p>
